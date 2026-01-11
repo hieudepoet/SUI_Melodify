@@ -279,7 +279,7 @@ backend/
 ## 8. Frontend Architecture
 
 ```
-frontend/app
+frontend/
 ├── pages/
 ├── components/
 ├── lib/        // sui, audio, seal
@@ -332,6 +332,196 @@ Designed to extend:
 ## 12. Status
 
 🚧 MVP architecture ready for development
+
+---
+
+## 13. UML & System Diagrams
+
+This section provides **visual references** for architecture and core flows. Diagrams are written in **Mermaid** so they can be rendered directly in GitHub / Markdown tools.
+
+---
+
+### 13.1 System Architecture (Component Diagram)
+
+```mermaid
+flowchart LR
+    User((User))
+    FE[Frontend
+React + Sui dApp Kit]
+    BE[Backend
+ExpressJS]
+    AI[AI Agents
+LLM / Audio Gen]
+    Chain[Sui Network
+Move Smart Contracts]
+    Storage[Walrus / IPFS
+Audio + Metadata]
+
+    User --> FE
+    FE -->|Sign Tx| Chain
+    FE -->|REST / WS| BE
+    BE --> AI
+    BE --> Storage
+    FE -->|Stream Audio| Storage
+    BE -->|Index / Query| Chain
+```
+
+---
+
+### 13.2 On-chain Object Model (UML-style)
+
+```mermaid
+classDiagram
+    class Music {
+        UID id
+        address creator
+        vector<ID> parents
+        u64 royalty_bps
+        u64 revenue
+        bool published
+    }
+
+    class ListenCap {
+        UID id
+        ID music_id
+        address listener
+        u64 expiry
+    }
+
+    class RemixCap {
+        UID id
+        ID parent_music_id
+        address holder
+    }
+
+    class SubscriptionCap {
+        UID id
+        u8 tier
+        u64 expiry
+    }
+
+    class Badge {
+        UID id
+        string badge_type
+        u64 boost_value
+    }
+
+    Music "1" <-- "many" ListenCap : generates
+    Music "1" <-- "many" RemixCap : allows
+    Music "1" <-- "many" Badge : enhanced_by
+    SubscriptionCap "1" <-- "many" ListenCap : reduces_fee
+```
+
+---
+
+### 13.3 Music Creation Sequence
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant FE as Frontend
+    participant BE as Backend
+    participant AI as AI Agent
+    participant Store as Walrus/IPFS
+    participant Chain as Sui
+
+    User->>FE: Enter prompt / config
+    FE->>BE: Request generation
+    BE->>AI: Generate audio
+    AI-->>BE: Audio output
+    BE->>Store: Upload audio
+    Store-->>BE: Audio URI
+    FE->>Chain: create_music(uri, royalty)
+    Chain-->>FE: Music object minted (Draft)
+```
+
+---
+
+### 13.4 Pay-to-Listen Flow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant FE
+    participant Chain
+    participant Treasury
+
+    User->>FE: Click Listen
+    FE->>Chain: listen(music_id, payment)
+    Chain->>Chain: Mint ListenCap
+    Chain->>Treasury: Split fees
+    Chain-->>FE: Playback authorized
+```
+
+---
+
+### 13.5 Remix & Derivative Flow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant FE
+    participant Chain
+
+    User->>FE: Request remix
+    FE->>Chain: Mint RemixCap
+    FE->>Chain: remix(parent_music)
+    Chain->>Chain: Create child Music
+    Chain-->>FE: Lineage linked
+```
+
+---
+
+### 13.6 Marketplace & Ownership Transfer
+
+```mermaid
+sequenceDiagram
+    participant Seller
+    participant Buyer
+    participant FE
+    participant Chain
+
+    Seller->>FE: List music
+    FE->>Chain: list(music, price)
+    Buyer->>FE: Buy music
+    FE->>Chain: purchase()
+    Chain->>Chain: Split royalty
+    Chain-->>Buyer: Ownership transferred
+```
+
+---
+
+### 13.7 Subscription & Access Control
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant FE
+    participant Chain
+
+    User->>FE: Subscribe tier
+    FE->>Chain: subscribe(tier)
+    Chain->>Chain: Mint SubscriptionCap
+    Chain-->>FE: Features unlocked
+```
+
+---
+
+### 13.8 Gamification & Badge Minting
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Chain
+
+    User->>Chain: On-chain activity
+    Chain->>Chain: Evaluate rules
+    Chain->>Chain: Mint Badge
+```
+
+---
+
+> **Note**: These diagrams are intended as a living reference. Developers are encouraged to update them as modules evolve.
 
 ---
 
