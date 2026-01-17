@@ -1,10 +1,12 @@
 import { Link, useLocation } from "react-router-dom";
 import { Music, Menu, X } from "lucide-react";
 import { useState } from "react";
+import { ConnectButton, useCurrentAccount } from '@mysten/dapp-kit';
 
 export default function Header() {
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const currentAccount = useCurrentAccount();
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -49,9 +51,19 @@ export default function Header() {
 
           {/* Desktop Wallet Button */}
           <div className="hidden md:flex items-center gap-4">
-            <button className="px-6 py-2 rounded-lg bg-slate-800 border border-slate-700 font-poppins font-semibold text-white transition-all duration-200 hover:border-orange-400 hover:bg-slate-700 cursor-pointer">
-              Connect Wallet
-            </button>
+            {currentAccount ? (
+              <div className="flex items-center gap-3">
+                <div className="flex flex-col items-end">
+                  <span className="font-mono text-sm text-slate-400">
+                    {currentAccount.address.slice(0, 6)}...{currentAccount.address.slice(-4)}
+                  </span>
+                  <span className="text-xs text-slate-500">Connected</span>
+                </div>
+                <ConnectButton />
+              </div>
+            ) : (
+              <ConnectButton />
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -84,9 +96,23 @@ export default function Header() {
                 {link.label}
               </Link>
             ))}
-            <button className="w-full mt-4 px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 font-poppins font-semibold text-white transition-all duration-200 hover:border-orange-400 hover:bg-slate-700 cursor-pointer">
-              Connect Wallet
-            </button>
+            {currentAccount ? (
+              <div className="mt-4">
+                <div className="flex items-center justify-between px-4 py-2 rounded-lg bg-slate-800 border border-slate-700">
+                  <div>
+                    <div className="font-mono text-sm text-white">
+                      {currentAccount.address.slice(0, 10)}...{currentAccount.address.slice(-6)}
+                    </div>
+                    <div className="text-xs text-slate-500 mt-1">Connected</div>
+                  </div>
+                  <ConnectButton />
+                </div>
+              </div>
+            ) : (
+              <div className="mt-4">
+                <ConnectButton className="w-full" />
+              </div>
+            )}
           </nav>
         )}
       </div>

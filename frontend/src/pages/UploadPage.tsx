@@ -1,8 +1,11 @@
 import { useState } from "react";
 import { Upload, Music, AlertCircle, CheckCircle } from "lucide-react";
 import WaveformPreview from "../components/music/WaveformPreview";
+import { walrusService } from "../services/walrus";
+import { useMintMusic } from "../hooks/useMintMusic";
 
 export default function UploadPage() {
+  const { mintMusic } = useMintMusic();
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -50,20 +53,63 @@ export default function UploadPage() {
     }
 
     setIsPublishing(true);
-    // Simulate publishing delay
-    setTimeout(() => {
+    setError("");
+
+    try {
+      // 1. Upload audio to Walrus
+      console.log('Uploading audio to Walrus...');
+      const audioCid = await walrusService.uploadFile(file);
+      
+      // 2. Upload preview (use same file for now, in production generate 30s preview)
+      console.log('Uploading preview...');
+      const previewCid = await walrusService.uploadFile(file);
+      
+      // 3. Create metadata JSON
+      const metadata = {
+        name: title,
+        description: description || '',
+        genre: genre,
+        image: '', // In production: upload cover image
+        attributes: [
+          { trait_type: 'Genre', value: genre },
+          { trait_type: 'Price', value: `${price} SUI` },
+        ],
+      };
+      
+      // For now, store metadata as base64 (in production: upload to IPFS)
+      const metadataUri = `data:application/json;base64,${btoa(JSON.stringify(metadata))}`;
+      const coverUri = ''; // In production: upload cover to Walrus
+      
+      // 4. Mint Music NFT on blockchain
+      console.log('Minting Music NFT...');
+      const { musicId, digest } = await mintMusic({
+        audioCid,
+        previewCid,
+        metadataUri,
+        coverUri,
+        royaltyBps: Math.floor(price * 100), // Convert price to basis points
+      });
+      
+      console.log('Music minted successfully!', { musicId, digest });
+      
       setIsPublishing(false);
       setUploadSuccess(true);
+      
+      // Reset form after 2 seconds
       setTimeout(() => {
         setUploadSuccess(false);
-        // Reset form
         setFile(null);
         setTitle("");
         setDescription("");
         setPrice(0.5);
         setGenre("Electronic");
-      }, 2000);
-    }, 2000);
+      }, 3000);
+      
+    } catch (err) {
+      console.error('Upload failed:', err);
+      setIsPublishing(false);
+      setError((err as Error).message || 'Upload failed. Please try again.');
+    }
   };
 
   return (

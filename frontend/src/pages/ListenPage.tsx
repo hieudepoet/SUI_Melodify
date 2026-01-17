@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import {
   Play,
@@ -9,33 +9,47 @@ import {
   Headphones,
   DollarSign,
 } from "lucide-react";
-import {
-  mockMusicTracks,
-  generateCoverColor,
-} from "../services/mockMusicService";
+import { useMusic, parseMusic } from "../hooks/useMusic";
+import { useListen } from "../hooks/useListen";
+import { useMetadata } from "../hooks/useMetadata";
+import { useSuiClient } from "@mysten/dapp-kit";
+import { createSEALService } from "../services/seal";
+import { walrusService } from "../services/walrus";
+import { SUI_CONFIG } from "@/config/sui";
 
 export default function ListenPage() {
   const { musicId } = useParams<{ musicId: string }>();
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [volume, setVolume] = useState(100);
-  const [isPaid, setIsPaid] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
 
-  const music =
-    mockMusicTracks.find(track => track.id === musicId) || mockMusicTracks[0];
-  const duration = music.duration;
-  const coverGradient = music.coverUrl || generateCoverColor(music.id);
+  // Fetch music data from blockchain
+  const { data: musicData, isLoading: queryLoading } = useMusic(musicId!);
+  const music = musicData ? parseMusic(musicData) : null;
+  
+  // Fetch metadata from metadata_uri
+  const { metadata, isLoading: metadataLoading } = useMetadata(music?.metadata_uri);
+  
+  // Listen payment hook
+  const { payToListen, isLoading: paymentLoading, hasAccess, listenCapId } = useListen(musicId!);
+
+  // Derived state
+  const isPaid = hasAccess;
+  const isProcessing = paymentLoading;
+  const duration = metadata?.duration || 180; // From metadata or default 3 minutes
+  const coverGradient = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
 
   const handlePayToListen = async () => {
-    setIsProcessing(true);
-    // Simulate payment processing
-    setTimeout(() => {
-      setIsProcessing(false);
-      setIsPaid(true);
+    if (!music) return;
+    
+    try {
+      // Pay 0.001 SUI (1_000_000 MIST)
+      await payToListen('1000000');
       // Auto-play after payment
       setIsPlaying(true);
-    }, 2000);
+    } catch (error) {
+      console.error('Payment failed:', error);
+    }
   };
 
   const formatTime = (seconds: number): string => {
@@ -43,6 +57,18 @@ export default function ListenPage() {
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
+
+  // Loading state
+  if (queryLoading || metadataLoading || !music || !metadata) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-orange-500 border-t-transparent mx-auto mb-4" />
+          <p className="font-poppins text-slate-400">Loading music...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 px-4 py-8 sm:px-6 lg:px-8">
@@ -81,13 +107,13 @@ export default function ListenPage() {
             {/* Track Info */}
             <div className="mb-8">
               <h1 className="font-righteous text-4xl font-bold text-white sm:text-5xl mb-2">
-                {music.title}
+                {metadata.title}
               </h1>
               <p className="font-poppins text-lg text-slate-400 mb-4">
-                by {music.creator}
+                by {metadata.artist}
               </p>
               <p className="font-poppins text-slate-400 max-w-2xl">
-                {music.description}
+                {metadata.description}
               </p>
             </div>
 
@@ -172,7 +198,7 @@ export default function ListenPage() {
                     <span className="font-poppins text-sm">Listens</span>
                   </div>
                   <span className="font-poppins font-bold text-orange-400">
-                    {(music.listenCount / 1000).toFixed(1)}K
+                    {music.total_listens >= 1000 ? (music.total_listens / 1000).toFixed(1) + 'K' : music.total_listens}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
@@ -181,7 +207,7 @@ export default function ListenPage() {
                     <span className="font-poppins text-sm">Revenue</span>
                   </div>
                   <span className="font-poppins font-bold text-blue-400">
-                    {music.revenue.toFixed(2)} SUI
+                    {music.revenue_pool.toFixed(4)} SUI
                   </span>
                 </div>
                 <div className="h-px bg-slate-700" />
@@ -190,7 +216,7 @@ export default function ListenPage() {
                     Genre
                   </span>
                   <span className="font-poppins font-semibold text-white">
-                    {music.genre}
+                    {metadata.genre}
                   </span>
                 </div>
               </div>
@@ -208,7 +234,7 @@ export default function ListenPage() {
                   </p>
                   <div className="flex items-center gap-2">
                     <div className="text-3xl font-righteous font-bold text-orange-400">
-                      {music.price}
+                      {metadata.price}
                     </div>
                     <span className="font-poppins font-semibold text-slate-400">
                       SUI
