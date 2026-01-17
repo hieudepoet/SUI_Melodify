@@ -145,7 +145,7 @@ public fun take_music(kiosk: &mut Kiosk, cap: &KioskOwnerCap, music_id: ID): Mus
 
 /// Create TransferPolicy for Music with default rules
 public entry fun create_transfer_policy(publisher: &Publisher, ctx: &mut TxContext) {
-    let (policy, policy_cap) = policy::new<Music>(publisher, ctx);
+    let (mut policy, policy_cap) = policy::new<Music>(publisher, ctx);
     let policy_id = object::id(&policy);
 
     // Add default royalty rule (10%)
@@ -305,6 +305,7 @@ public fun confirm_purchase(policy: &TransferPolicy<Music>, request: TransferReq
 public entry fun buy_music(
     kiosk: &mut Kiosk,
     music_id: ID,
+    price: u64,
     mut payment: Coin<SUI>,
     policy: &mut TransferPolicy<Music>,
     treasury: &mut Treasury,
