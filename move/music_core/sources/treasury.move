@@ -1,5 +1,5 @@
 /// Treasury Module - Platform fund management
-module treasury::treasury;
+module music_core::treasury;
 
 use sui::balance::{Self, Balance};
 use sui::coin::{Self, Coin};
@@ -14,9 +14,9 @@ const ENotAdmin: u64 = 1;
 const EInsufficientBalance: u64 = 2;
 
 // ======== Structs ========
-
-/// Platform Treasury
-struct Treasury has key {
+/** Platform Treasury
+ */
+public struct Treasury has key {
     id: UID,
     balance: Balance<SUI>,
     admin: address,
@@ -24,26 +24,25 @@ struct Treasury has key {
     total_withdrawn: u64,
 }
 
-/// Admin capability
-struct AdminCap has key, store {
+/** Admin capability
+ */
+public struct AdminCap has key, store {
     id: UID,
 }
 
 // ======== Events ========
-
-struct FundsDeposited has copy, drop {
+public struct FundsDeposited has copy, drop {
     amount: u64,
     total_balance: u64,
 }
 
-struct FundsWithdrawn has copy, drop {
+public struct FundsWithdrawn has copy, drop {
     amount: u64,
     recipient: address,
     remaining_balance: u64,
 }
 
 // ======== Init Function ========
-
 fun init(ctx: &mut TxContext) {
     let admin = tx_context::sender(ctx);
 
@@ -63,72 +62,71 @@ fun init(ctx: &mut TxContext) {
 }
 
 // ======== Public Functions ========
-
-/// Deposit funds to treasury
-public fun deposit(treasury: &mut Treasury, payment: Coin<SUI>) {
+/** Deposit funds to treasury (method syntax)
+ */
+public fun deposit(self: &mut Treasury, payment: Coin<SUI>) {
     let amount = coin::value(&payment);
-    let balance_to_add = coin::into_balance(payment);
-    balance::join(&mut treasury.balance, balance_to_add);
+    let mut balance_to_add = coin::into_balance(payment); // let mut
+    balance::join(&mut self.balance, balance_to_add);
 
-    treasury.total_collected = treasury.total_collected + amount;
+    self.total_collected = self.total_collected + amount;
 
     event::emit(FundsDeposited {
         amount,
-        total_balance: balance::value(&treasury.balance),
+        total_balance: balance::value(&self.balance),
     });
 }
 
-/// Withdraw funds from treasury (admin only)
+/** Withdraw funds from treasury (admin only)
+ */
 public fun withdraw(
-    treasury: &mut Treasury,
-    _admin_cap: &AdminCap,
+    self: &mut Treasury,
+    admin_cap: &AdminCap,
     amount: u64,
     recipient: address,
     ctx: &mut TxContext,
 ) {
-    assert!(balance::value(&treasury.balance) >= amount, EInsufficientBalance);
+    assert!(self.admin == tx_context::sender(ctx), ENotAdmin); // Extra check
+    assert!(balance::value(&self.balance) >= amount, EInsufficientBalance);
 
-    let withdrawn = coin::from_balance(
-        balance::split(&mut treasury.balance, amount),
-        ctx,
-    );
+    let withdrawn_balance = balance::split(&mut self.balance, amount);
+    let withdrawn = coin::from_balance(withdrawn_balance, ctx);
 
-    treasury.total_withdrawn = treasury.total_withdrawn + amount;
+    self.total_withdrawn = self.total_withdrawn + amount;
 
     event::emit(FundsWithdrawn {
         amount,
         recipient,
-        remaining_balance: balance::value(&treasury.balance),
+        remaining_balance: balance::value(&self.balance),
     });
 
     transfer::public_transfer(withdrawn, recipient);
 }
 
-/// Transfer admin capability
+/** Transfer admin capability
+ */
 public fun transfer_admin(admin_cap: AdminCap, new_admin: address) {
     transfer::transfer(admin_cap, new_admin);
 }
 
-// ======== Getter Functions ========
-
-public fun get_balance(treasury: &Treasury): u64 {
-    balance::value(&treasury.balance)
+// ======== Getter Functions (method syntax) ========
+public fun balance(self: &Treasury): u64 {
+    balance::value(&self.balance)
 }
 
-public fun get_total_collected(treasury: &Treasury): u64 {
-    treasury.total_collected
+public fun total_collected(self: &Treasury): u64 {
+    self.total_collected
 }
 
-public fun get_total_withdrawn(treasury: &Treasury): u64 {
-    treasury.total_withdrawn
+public fun total_withdrawn(self: &Treasury): u64 {
+    self.total_withdrawn
 }
 
-public fun get_admin(treasury: &Treasury): address {
-    treasury.admin
+public fun admin(self: &Treasury): address {
+    self.admin
 }
 
 // ======== Test Functions ========
-
 #[test_only]
 public fun init_for_testing(ctx: &mut TxContext) {
     init(ctx);
