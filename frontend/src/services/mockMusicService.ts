@@ -1,0 +1,112 @@
+import { Music, User } from "../types/music";
+
+// Mock music data with album art-inspired colors
+export const mockMusicTracks: Music[] = [
+  {
+    id: "1",
+    title: "Neon Dreams",
+    description: "A futuristic electronic journey",
+    creator: "0x1234...5678",
+    price: 0.5,
+    audioHash: "hash_neon_dreams",
+    listenCount: 1234,
+    revenue: 617,
+    genre: "Electronic",
+    createdAt: "2024-01-15",
+    duration: 180,
+    coverUrl: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+  },
+  {
+    id: "2",
+    title: "Sunset Vibes",
+    description: "Smooth ambient vibes",
+    creator: "0xabcd...ef01",
+    price: 0.3,
+    audioHash: "hash_sunset_vibes",
+    listenCount: 892,
+    revenue: 267.6,
+    genre: "Ambient",
+    createdAt: "2024-01-10",
+    duration: 240,
+    coverUrl: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+  },
+  {
+    id: "3",
+    title: "Urban Beats",
+    description: "Hip-hop beats for the city",
+    creator: "0x9abc...def2",
+    price: 0.4,
+    audioHash: "hash_urban_beats",
+    listenCount: 2156,
+    revenue: 862.4,
+    genre: "Hip-Hop",
+    createdAt: "2024-01-05",
+    duration: 200,
+    coverUrl: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
+  },
+  {
+    id: "4",
+    title: "Midnight Jazz",
+    description: "Smooth jazz for late nights",
+    creator: "0x3def...456g",
+    price: 0.6,
+    audioHash: "hash_midnight_jazz",
+    listenCount: 567,
+    revenue: 340.2,
+    genre: "Jazz",
+    createdAt: "2023-12-28",
+    duration: 300,
+    coverUrl: "linear-gradient(135deg, #fa709a 0%, #fee140 100%)",
+  },
+  {
+    id: "5",
+    title: "Cosmic Waves",
+    description: "Synthesized space sounds",
+    creator: "0x5ghi...789j",
+    price: 0.5,
+    audioHash: "hash_cosmic_waves",
+    listenCount: 1456,
+    revenue: 728,
+    genre: "Electronic",
+    createdAt: "2023-12-20",
+    duration: 220,
+    coverUrl: "linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)",
+  },
+  {
+    id: "6",
+    title: "Desert Echo",
+    description: "World music fusion",
+    creator: "0x7jkl...mno8",
+    price: 0.7,
+    audioHash: "hash_desert_echo",
+    listenCount: 789,
+    revenue: 552.3,
+    genre: "World",
+    createdAt: "2023-12-15",
+    duration: 180,
+    coverUrl: "linear-gradient(135deg, #ff9a56 0%, #ff6a88 100%)",
+  },
+];
+
+export const mockCurrentUser: User = {
+  address: "0x1111...2222",
+  balance: 5.234,
+  totalTracks: 2,
+  totalRevenue: 1.234,
+  totalListens: 3145,
+};
+
+export const generateCoverColor = (id: string): string => {
+  const colors = [
+    "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+    "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+    "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
+    "linear-gradient(135deg, #fa709a 0%, #fee140 100%)",
+    "linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)",
+    "linear-gradient(135deg, #ff9a56 0%, #ff6a88 100%)",
+    "linear-gradient(135deg, #30cfd0 0%, #330867 100%)",
+    "linear-gradient(135deg, #ec77ab 0%, #ffd89b 100%)",
+  ];
+  const index = parseInt(id, 10) % colors.length;
+  return colors[index];
+};
