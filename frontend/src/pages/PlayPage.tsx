@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { suiClient } from '../services/sui/client'
 import type { Music, MusicMetadata } from '../types'
 import { buildListenTx } from '../services/sui/transactions'
+import { useActivityLog } from '../context/ActivityLogContext'
 import { DEFAULT_LISTEN_PRICE } from '../config/constants'
 import { usePlayerStore } from '../store/playerStore'
 
@@ -108,6 +109,8 @@ export default function PlayPage() {
   const [testMode, setTestMode] = useState(false)
   const TEST_WALLET = '0xfedd3f138678c752d1b28a1b9abe90e2a1dda3a0a8320165e90ba1f59c9f8de9' // Test wallet address
 
+  const { addLog } = useActivityLog()
+
   const handlePayToListen = async () => {
     if (!account || !music) return
 
@@ -122,13 +125,13 @@ export default function PlayPage() {
       const result = await signAndExecute({ transaction: tx })
       console.log('Listen cap minted:', result)
 
-      alert('✅ Payment successful! You can now listen to this track.')
+      addLog('Payment successful! Access granted.', 'success')
       setHasListenCap(true)
       
       loadMusic() // Reload to update listen count
     } catch (error) {
       console.error('Payment failed:', error)
-      alert(`❌ Payment failed: ${error}`)
+      addLog(`Payment failed: ${error}`, 'error')
     } finally {
       setPurchasing(false)
     }

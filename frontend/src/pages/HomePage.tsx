@@ -3,7 +3,7 @@ import { useCurrentAccount } from '@mysten/dapp-kit'
 import { useState, useEffect } from 'react'
 import { suiClient } from '../services/sui/client'
 import { type Music } from '../types'
-import { PACKAGE_ID } from '../config/constants'
+import { PACKAGE_ID, DEFAULT_COVER_IMAGE } from '../config/constants'
 
 export default function HomePage() {
   const account = useCurrentAccount()
@@ -186,17 +186,11 @@ function MusicCard({ music }: { music: Music }) {
 
       {/* Mock or Real Cover */}
       <div className={`aspect-square mb-3 border-2 border-black overflow-hidden relative ${!music.cover_uri ? `bg-gradient-to-br ${getGradient(music.id)}` : 'bg-gray-200'}`}>
-        {music.cover_uri ? (
-            <img src={music.cover_uri} alt="Cover" className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all" />
-        ) : (
-            <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-6xl filter drop-shadow-lg opacity-50 mix-blend-overlay">
-                    🎵
-                </span>
-                {/* Vintage overlay texture */}
-                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
-            </div>
-        )}
+        <img 
+            src={DEFAULT_COVER_IMAGE} 
+            alt="Cover" 
+            className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all" 
+        />
         
         {/* Play Overlay */}
         <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">

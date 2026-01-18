@@ -19,6 +19,12 @@ export default function Header() {
             Home
           </Link>
           <Link
+            to="/explore"
+            className="text-lg font-bold uppercase tracking-wider hover:text-brutalist-yellow transition-colors"
+          >
+            Explore
+          </Link>
+          <Link
             to="/upload"
             className="text-lg font-bold uppercase tracking-wider hover:text-brutalist-yellow transition-colors"
           >

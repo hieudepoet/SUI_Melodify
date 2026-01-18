@@ -5,11 +5,13 @@ import { uploadToWalrus } from '../services/walrus'
 import { PACKAGE_ID } from '../config/constants'
 import { suiClient } from '../services/sui/client'
 import { Transaction } from '@mysten/sui/transactions'
+import { useActivityLog } from '../context/ActivityLogContext'
 
 export default function UploadPage() {
   const account = useCurrentAccount()
   const navigate = useNavigate()
   const { mutateAsync: signAndExecute } = useSignAndExecuteTransaction()
+  const { addLog } = useActivityLog()
 
   const [uploadMode, setUploadMode] = useState<'walrus' | 'direct'>('walrus')
   const [file, setFile] = useState<File | null>(null)
@@ -128,11 +130,12 @@ export default function UploadPage() {
         }
       }
 
+
       if (!musicId) {
         throw new Error('Failed to get music ID from transaction')
       }
 
-      alert('✅ Music uploaded and published successfully!')
+      addLog('Music uploaded and published successfully!', 'success')
       navigate(`/play/${musicId}`)
     } catch (error) {
       console.error('Upload failed:', error)

@@ -27,3 +27,6 @@ export const DEFAULT_LISTEN_PRICE = 1_000_000;
 export const PREDICTION_STAKE_AMOUNT = 1_000_000; // 0.001 SUI
 export const PREDICTION_LOCK_EPOCHS = 1; // 1 day
 export const PREDICTION_MULTIPLIER = 2; // 2x reward
+
+// Assets
+export const DEFAULT_COVER_IMAGE = 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?q=80&w=800&auto=format&fit=crop';

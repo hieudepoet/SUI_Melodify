@@ -6,26 +6,31 @@ import UploadPage from './pages/UploadPage'
 import PlayPage from './pages/PlayPage'
 import StakePage from './pages/StakePage'
 import ProfilePage from './pages/ProfilePage'
+import DiscoverPage from './pages/DiscoverPage'
+import { ActivityLogProvider } from './context/ActivityLogContext'
 
 function App() {
   return (
-    <BrowserRouter>
-      <div className="min-h-screen flex flex-col bg-brutalist-bg">
-        <Header />
-        
-        <main className="flex-1 pb-32">
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/upload" element={<UploadPage />} />
-            <Route path="/play/:musicId" element={<PlayPage />} />
-            <Route path="/stake" element={<StakePage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-          </Routes>
-        </main>
+    <ActivityLogProvider>
+      <BrowserRouter>
+        <div className="min-h-screen flex flex-col bg-brutalist-bg">
+          <Header />
+          
+          <main className="flex-1 pb-32">
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/explore" element={<DiscoverPage />} />
+              <Route path="/upload" element={<UploadPage />} />
+              <Route path="/play/:musicId" element={<PlayPage />} />
+              <Route path="/stake" element={<StakePage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+            </Routes>
+          </main>
 
-        <GlobalPlayer />
-      </div>
-    </BrowserRouter>
+          <GlobalPlayer />
+        </div>
+      </BrowserRouter>
+    </ActivityLogProvider>
   )
 }
 
