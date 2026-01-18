@@ -39,13 +39,14 @@ export function buildCreateMusicTx(
 
 /**
  * Build transaction to publish music (DRAFT → PUBLISHED)
+ * Note: This now consumes the Music object and shares it publicly
  */
 export function buildPublishMusicTx(musicId: string) {
   const tx = new Transaction();
 
   tx.moveCall({
     target: `${PACKAGE_ID}::music::publish`,
-    arguments: [tx.object(musicId)],
+    arguments: [tx.object(musicId)], // Music object is consumed and shared
   });
 
   return tx;

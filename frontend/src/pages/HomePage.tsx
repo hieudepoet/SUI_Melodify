@@ -27,7 +27,8 @@ export default function HomePage() {
       })
 
       // Fetch music objects
-      const musicIds = result.data.map((event: any) => event.parsedJson.music_id)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const musicIds = result.data.map((event: any) => (event.parsedJson as any).music_id)
       const musicObjects = await Promise.all(
         musicIds.map(id => suiClient.getObject({
           id,
@@ -36,6 +37,7 @@ export default function HomePage() {
       )
 
       const musicData = musicObjects
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .map((obj: any) => {
           if (obj.data?.content?.fields) {
             const fields = obj.data.content.fields
@@ -66,71 +68,84 @@ export default function HomePage() {
   }
 
   return (
-    <div 
-      className="min-h-screen bg-cover bg-center bg-no-repeat bg-fixed relative"
-      style={{
-        backgroundImage: `url('/background.png')`
-      }}
-    >
-      {/* Dark Overlay for readability */}
-      <div className="absolute inset-0 bg-black/60 pointer-events-none"></div>
+    <div className="min-h-screen bg-brutalist-pink font-mono selection:bg-brutalist-green selection:text-black">
+      {/* Background Pattern Overlay */}
+      <div className="fixed inset-0 pointer-events-none z-0 opacity-20" 
+           style={{ backgroundImage: 'radial-gradient(circle, #000 2px, transparent 2.5px)', backgroundSize: '30px 30px' }}>
+      </div>
 
-      <div className="relative z-10 container mx-auto px-4 py-12">
+      <div className="relative z-10 container mx-auto px-4 py-8">
+        {/* Navigation / Header */}
+        <nav className="flex justify-between items-center mb-16 border-4 border-black bg-white p-4 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+            <div className="text-2xl font-bold font-comic tracking-wider text-brutalist-pink retro-shadow">
+              MELODIFY.WAV
+            </div>
+            {account ? (
+              <div className="flex items-center gap-4">
+                <span className="font-bold hidden md:inline bg-brutalist-cyan px-2 border-2 border-black">
+                  {account.address.slice(0, 6)}...{account.address.slice(-4)}
+                </span>
+                <button onClick={() => navigate('/profile')} className="btn-brutalist bg-brutalist-yellow text-sm">
+                  MY STUFF
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => navigate('/profile')} className="btn-brutalist bg-brutalist-green text-sm">
+                CONNECT WALLET
+              </button>
+            )}
+        </nav>
+
         {/* Hero Section */}
-        <section className="mb-24 text-center">
-          <h1 className="text-8xl md:text-9xl font-extrabold mb-6 comic-text text-brutalist-pink drop-shadow-lg">
+        <section className="mb-20 text-center relative">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-brutalist-cyan blur-[100px] opacity-50 z-[-1]"></div>
+          
+          <h1 className="text-7xl md:text-9xl mb-6 comic-shadow text-white rotate-[-2deg] hover:rotate-0 transition-transform cursor-default">
             MELODIFY
           </h1>
-          <p className="text-3xl md:text-4xl mb-12 text-white font-bold uppercase tracking-wider drop-shadow-md">
-            Decentralized Music Revolution
+          <p className="text-2xl md:text-4xl mb-12 text-black font-bold bg-white inline-block px-4 py-2 border-4 border-black -rotate-1 shadow-[8px_8px_0px_0px_rgba(255,255,0,1)]">
+            DECENTRALIZED AUDIO REVOLUTION
           </p>
 
-          <div className="flex flex-col md:flex-row justify-center gap-6">
-            {account ? (
-              <>
-                <button
-                  onClick={() => navigate('/upload')}
-                  className="btn-brutalist bg-brutalist-green text-black text-2xl shadow-brutalist hover:shadow-brutalist-hover transform hover:-translate-y-1"
-                >
-                  🚀 UPLOAD TRACK
-                </button>
-                <button
-                  onClick={() => navigate('/stake')}
-                  className="btn-brutalist bg-brutalist-yellow text-black text-2xl shadow-brutalist hover:shadow-brutalist-hover transform hover:-translate-y-1"
-                >
-                  💰 STAKE & EARN
-                </button>
-              </>
-            ) : (
-              <div className="inline-block bg-white border-4 border-black p-4 rotate-2 transform hover:rotate-0 transition-all">
-                <p className="text-2xl font-bold text-black uppercase">
-                  👈 Connect Wallet to Join the Vibe
-                </p>
-              </div>
-            )}
+          <div className="flex flex-col md:flex-row justify-center gap-6 mt-8">
+            <button
+              onClick={() => navigate('/upload')}
+              className="btn-brutalist bg-brutalist-green text-xl hover:bg-green-400"
+            >
+              🚀 DROP TRACK
+            </button>
+            <button
+              onClick={() => navigate('/stake')}
+              className="btn-brutalist bg-brutalist-yellow text-xl hover:bg-yellow-400"
+            >
+              💎 STAKE $SUI
+            </button>
           </div>
         </section>
 
-        {/* Recent Music */}
-        <section className="bg-white/10 backdrop-blur-md p-8 border-4 border-white/20 rounded-xl">
-          <h2 className="text-5xl font-bold mb-12 text-white uppercase text-center comic-text">
-            Fresh Drops
-          </h2>
+        {/* Recent Music Grid */}
+        <section>
+          <div className="flex justify-between items-end mb-8 border-b-8 border-black pb-4">
+             <h2 className="text-5xl text-black comic-shadow">FRESH DROPS</h2>
+             <div className="text-xl font-bold bg-black text-white px-3 py-1 -rotate-2">
+                LIVE ON TESTNET
+             </div>
+          </div>
 
           {loading ? (
-            <div className="text-center text-white text-2xl animate-pulse">Loading the beats...</div>
+            <div className="text-center text-4xl animate-bounce font-bold">LOADING BEATS...</div>
           ) : recentMusic.length === 0 ? (
-            <div className="text-center bg-black/50 p-8 border-4 border-white max-w-2xl mx-auto">
-              <p className="text-white text-2xl mb-4">No tracks found yet.</p>
+            <div className="text-center card-brutalist p-12 bg-brutalist-blue text-white">
+              <p className="text-3xl mb-4">GHOST TOWN HERE...</p>
               <button 
                 onClick={() => navigate('/upload')}
-                className="btn-brutalist bg-brutalist-pink text-white text-lg"
+                className="btn-brutalist bg-white text-black"
               >
-                Be the first to upload!
+                BE THE FIRST
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {recentMusic.map(music => (
                 <MusicCard key={music.id} music={music} />
               ))}
@@ -145,24 +160,69 @@ export default function HomePage() {
 function MusicCard({ music }: { music: Music }) {
   const navigate = useNavigate()
 
+  // Deterministic color generation for mock cover
+  const getGradient = (id: string) => {
+    const colors = [
+      'from-pink-500 to-yellow-500',
+      'from-blue-400 to-green-500', 
+      'from-purple-500 to-pink-500',
+      'from-yellow-400 to-red-500',
+      'from-cyan-400 to-blue-600'
+    ];
+    const index = parseInt(id.slice(0, 2), 16) % colors.length;
+    return colors[index];
+  }
+
   return (
     <div
       onClick={() => navigate(`/play/${music.id}`)}
-      className="group relative border-4 border-black bg-white text-black p-4 cursor-pointer shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-[12px_12px_0px_0px_rgba(255,0,255,1)] hover:-translate-y-2 transition-all duration-200"
+      className="card-brutalist group p-3 cursor-pointer hover:bg-yellow-50"
     >
-      <div className="aspect-square bg-brutalist-blue mb-4 flex items-center justify-center text-6xl group-hover:scale-110 transition-transform">
-        💿
+      {/* Visual Header / Cassette Tape Look */}
+      <div className="bg-black text-white text-xs px-2 py-1 mb-2 flex justify-between font-mono">
+         <span>SIDE A</span>
+         <span>{music.status === 1 ? 'PUBLISHED' : 'DRAFT'}</span>
       </div>
-      <h3 className="font-extrabold text-2xl uppercase truncate mb-1">{music.id.slice(0, 8)}...</h3>
-      <p className="text-gray-600 font-bold text-sm truncate mb-4">BY: {music.creator.slice(0, 6)}...{music.creator.slice(-4)}</p>
+
+      {/* Mock or Real Cover */}
+      <div className={`aspect-square mb-3 border-2 border-black overflow-hidden relative ${!music.cover_uri ? `bg-gradient-to-br ${getGradient(music.id)}` : 'bg-gray-200'}`}>
+        {music.cover_uri ? (
+            <img src={music.cover_uri} alt="Cover" className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all" />
+        ) : (
+            <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-6xl filter drop-shadow-lg opacity-50 mix-blend-overlay">
+                    🎵
+                </span>
+                {/* Vintage overlay texture */}
+                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
+            </div>
+        )}
+        
+        {/* Play Overlay */}
+        <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+            <span className="text-4xl">▶️</span>
+        </div>
+      </div>
+
+      {/* Metadata */}
+      <h3 className="font-bold text-xl uppercase truncate leading-none mb-1 font-comic">{music.id.slice(0, 8)}</h3>
+      <p className="text-xs font-mono font-bold bg-brutalist-cyan inline-block px-1 border border-black mb-3">
+        @{music.creator.slice(0, 4)}...{music.creator.slice(-4)}
+      </p>
       
-      <div className="flex justify-between items-center border-t-4 border-black pt-3">
-        <span className="font-bold flex items-center gap-2">
-          🎧 {music.total_listens}
+      <div className="flex justify-between items-center border-t-2 border-black pt-2 mt-auto">
+        <span className="font-bold text-sm">
+           👂 {music.total_listens}
         </span>
-        <span className="bg-black text-white px-2 py-1 font-bold text-sm uppercase group-hover:bg-brutalist-pink transition-colors">
-          Play Now
-        </span>
+        <a 
+            href={`https://suiscan.xyz/testnet/object/${music.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="text-xs underline decoration-2 decoration-brutalist-pink font-bold hover:bg-black hover:text-white px-1 transition-colors"
+        >
+            SCAN ↗
+        </a>
       </div>
     </div>
   )

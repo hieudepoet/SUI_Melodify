@@ -2,43 +2,84 @@
 @tailwind components;
 @tailwind utilities;
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+@layer base {
+  body {
+    font-family: "VT323", monospace;
+    background-color: #ff00ff; /* Brutalist Pink Base */
+    background-image:
+      radial-gradient(black 1px, transparent 0),
+      radial-gradient(black 1px, transparent 0);
+    background-size: 20px 20px;
+    background-position:
+      0 0,
+      10px 10px;
+    color: #000;
+    overflow-x: hidden;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: "Bangers", cursive;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
 }
 
-body {
-  font-family: 'Arial Black', 'Impact', sans-serif;
-  background-color: #0a0a0a;
-  color: #ffffff;
+@layer components {
+  /* Brutalist Button 3D */
+  .btn-brutalist {
+    @apply px-6 py-2 border-4 border-black font-bold uppercase tracking-widest transition-all duration-100;
+    box-shadow: 4px 4px 0px 0px rgba(0, 0, 0, 1);
+  }
+
+  .btn-brutalist:hover {
+    @apply transform -translate-y-1;
+    box-shadow: 6px 6px 0px 0px rgba(0, 0, 0, 1);
+  }
+
+  .btn-brutalist:active {
+    @apply transform translate-y-1 translate-x-1;
+    box-shadow: 0px 0px 0px 0px rgba(0, 0, 0, 1);
+  }
+
+  /* Comic Card 3D */
+  .card-brutalist {
+    @apply border-4 border-black bg-white transition-all duration-200 relative;
+    box-shadow: 8px 8px 0px 0px rgba(0, 0, 0, 1);
+  }
+
+  .card-brutalist:hover {
+    @apply transform -translate-y-2;
+    box-shadow: 12px 12px 0px 0px rgba(0, 0, 0, 1);
+  }
+
+  /* Text Effects */
+  .comic-shadow {
+    text-shadow: 3px 3px 0px #000;
+  }
+
+  .retro-shadow {
+    text-shadow:
+      2px 2px 0px #ff00ff,
+      -2px 2px 0px #00ffff;
+  }
 }
 
-/* Brutalist button styles */
-.btn-brutalist {
-  padding-left: 1.5rem;
-  padding-right: 1.5rem;
-  padding-top: 0.75rem;
-  padding-bottom: 0.75rem;
-  border-width: 4px;
-  border-color: black;
-  text-transform: uppercase;
-  font-weight: bold;
-  letter-spacing: 0.1em;
-  transition-property: all;
-  transition-duration: 200ms;
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 12px;
 }
-
-.btn-brutalist:hover {
-  transform: translate(4px, 4px);
+::-webkit-scrollbar-track {
+  background: #000;
 }
-
-/* Comic style elements */
-.comic-text {
-  text-shadow: 
-    3px 3px 0px #000,
-    -1px -1px 0px #000,
-    1px -1px 0px #000,
-    -1px 1px 0px #000,
-    1px 1px 0px #000;
+::-webkit-scrollbar-thumb {
+  background: #00ff00;
+  border: 2px solid #000;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #ccff00;
 }

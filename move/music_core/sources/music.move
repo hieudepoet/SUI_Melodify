@@ -134,17 +134,21 @@ public fun create_music(
     music
 }
 
-/// Publish music (method syntax)
-public fun publish(self: &mut Music, ctx: &TxContext) {
-    assert!(self.creator == tx_context::sender(ctx), ENotOwner);
-    assert!(self.status == STATUS_DRAFT, EAlreadyPublished);
+/// Publish music - Consumes owned Music and shares it publicly
+/// This allows anyone to interact with the music (mint listen caps, etc.)
+public entry fun publish(mut music: Music, ctx: &TxContext) {
+    assert!(music.creator == tx_context::sender(ctx), ENotOwner);
+    assert!(music.status == STATUS_DRAFT, EAlreadyPublished);
 
-    self.status = STATUS_PUBLISHED;
+    music.status = STATUS_PUBLISHED;
 
     event::emit(MusicPublished {
-        music_id: object::id(self),
-        creator: self.creator,
+        music_id: object::id(&music),
+        creator: music.creator,
     });
+
+    // Share the music object so anyone can interact with it
+    transfer::public_share_object(music);
 }
 
 /// Add revenue to music pool (public(package))

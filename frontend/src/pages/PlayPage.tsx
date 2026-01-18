@@ -92,6 +92,9 @@ export default function PlayPage() {
     }
   }
 
+  const [testMode, setTestMode] = useState(false)
+  const TEST_WALLET = '0xfedd3f138678c752d1b28a1b9abe90e2a1dda3a0a8320165e90ba1f59c9f8de9' // Test wallet address
+
   const handlePayToListen = async () => {
     if (!account || !music) return
 
@@ -99,17 +102,25 @@ export default function PlayPage() {
       setPurchasing(true)
 
       const { tx, listenCap } = buildListenTx(music.id, DEFAULT_LISTEN_PRICE)
-      tx.transferObjects([listenCap], account.address)
+      
+      // Transfer to test wallet or current user
+      const recipient = testMode ? TEST_WALLET : account.address
+      tx.transferObjects([listenCap], recipient)
 
       const result = await signAndExecute({ transaction: tx })
       console.log('Listen cap minted:', result)
 
-      alert('Payment successful! You can now listen to this track.')
-      setHasListenCap(true)
+      if (testMode) {
+        alert(`✅ Payment successful!\n\nListenCap sent to TEST WALLET:\n${TEST_WALLET.slice(0, 20)}...`)
+      } else {
+        alert('✅ Payment successful! You can now listen to this track.')
+        setHasListenCap(true)
+      }
+      
       loadMusic() // Reload to update listen count
     } catch (error) {
       console.error('Payment failed:', error)
-      alert(`Payment failed: ${error}`)
+      alert(`❌ Payment failed: ${error}`)
     } finally {
       setPurchasing(false)
     }
@@ -188,17 +199,35 @@ export default function PlayPage() {
                   ▶ PLAY NOW
                 </button>
               ) : (
-                <button
-                  onClick={handlePayToListen}
-                  disabled={purchasing || !account}
-                  className={`btn-brutalist text-2xl px-8 py-4 shadow-brutalist hover:shadow-brutalist-hover ${
-                    purchasing ? 'bg-brutalist-gray' : 'bg-brutalist-pink'
-                  }`}
-                >
-                  {purchasing
-                    ? 'PROCESSING...'
-                    : `PAY 0.001 SUI TO LISTEN`}
-                </button>
+                <div>
+                  <button
+                    onClick={handlePayToListen}
+                    disabled={purchasing || !account}
+                    className={`btn-brutalist text-2xl px-8 py-4 shadow-brutalist hover:shadow-brutalist-hover ${
+                      purchasing ? 'bg-brutalist-gray' : 'bg-brutalist-pink'
+                    }`}
+                  >
+                    {purchasing
+                      ? 'PROCESSING...'
+                      : `PAY 0.001 SUI TO LISTEN`}
+                  </button>
+
+                  {/* Test Mode Toggle */}
+                  {account && (
+                    <div className="mt-4 flex items-center gap-3 bg-yellow-100 border-2 border-black p-3">
+                      <input
+                        type="checkbox"
+                        id="testMode"
+                        checked={testMode}
+                        onChange={(e) => setTestMode(e.target.checked)}
+                        className="w-5 h-5 cursor-pointer accent-brutalist-pink"
+                      />
+                      <label htmlFor="testMode" className="font-bold cursor-pointer select-none">
+                        🧪 TEST MODE: Send to test wallet ({TEST_WALLET.slice(0, 10)}...)
+                      </label>
+                    </div>
+                  )}
+                </div>
               )}
 
               {!account && (
