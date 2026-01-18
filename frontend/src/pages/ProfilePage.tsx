@@ -1,210 +1,185 @@
-import {
-  Copy,
-  LogOut,
-  Wallet,
-  Music,
-  Headphones,
-  TrendingUp,
-} from "lucide-react";
-import { mockCurrentUser } from "../services/mockMusicService";
-import { useState } from "react";
+import { useCurrentAccount } from '@mysten/dapp-kit'
+import { useState, useEffect } from 'react'
+import { suiClient } from '../services/sui/client'
+import { type Music, type StakePosition } from '../types'
+import { useNavigate } from 'react-router-dom'
 
 export default function ProfilePage() {
-  const [copied, setCopied] = useState(false);
+  const account = useCurrentAccount()
+  const navigate = useNavigate()
 
-  const copyAddress = () => {
-    navigator.clipboard.writeText(mockCurrentUser.address);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  const [myMusic, setMyMusic] = useState<Music[]>([])
+  const [myStakes, setMyStakes] = useState<StakePosition[]>([])
+  const [loading, setLoading] = useState(true)
+  const [balance, setBalance] = useState(0)
 
-  const formatAddress = (addr: string) => {
-    return `${addr.slice(0, 8)}...${addr.slice(-6)}`;
-  };
+  useEffect(() => {
+    if (account) {
+      loadProfile()
+    }
+  }, [account])
+
+  const loadProfile = async () => {
+    if (!account) return
+
+    try {
+      // Load balance
+      const balanceRes = await suiClient.getBalance({
+        owner: account.address,
+      })
+      setBalance(parseInt(balanceRes.totalBalance))
+
+      // Load owned music
+      const ownedObjects = await suiClient.getOwnedObjects({
+        owner: account.address,
+        options: {
+          showContent: true,
+          showType: true,
+        },
+      })
+
+      const musicObjects = ownedObjects.data.filter((obj: any) =>
+        obj.data?.content?.type?.includes('::music::Music')
+      )
+
+      const musicData = musicObjects.map((obj: any) => {
+        const fields = obj.data.content.fields
+        return {
+          id: obj.data.objectId,
+          creator: fields.creator,
+          audio_cid: fields.audio_cid,
+          preview_cid: fields.preview_cid,
+          metadata_uri: fields.metadata_uri,
+          cover_uri: fields.cover_uri,
+          parent: fields.parent || null,
+          total_listens: parseInt(fields.total_listens),
+          revenue_balance: parseInt(fields.revenue_pool),
+          royalty_bps: fields.royalty_bps,
+          status: fields.status,
+        } as Music
+      })
+
+      setMyMusic(musicData)
+
+      // Load stake positions
+      const stakeObjects = ownedObjects.data.filter((obj: any) =>
+        obj.data?.content?.type?.includes('::stake::StakePosition')
+      )
+
+      const stakeData = stakeObjects.map((obj: any) => {
+        const fields = obj.data.content.fields
+        return {
+          id: obj.data.objectId,
+          music_id: fields.music_id,
+          staker: fields.staker,
+          amount: parseInt(fields.amount),
+          staked_at_epoch: parseInt(fields.staked_at_epoch),
+          unlock_epoch: parseInt(fields.unlock_epoch),
+          staked_at_ms: parseInt(fields.staked_at_ms),
+        } as StakePosition
+      })
+
+      setMyStakes(stakeData)
+    } catch (error) {
+      console.error('Failed to load profile:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (!account) {
+    return (
+      <div className="container mx-auto px-4 py-12 text-center">
+        <h1 className="text-6xl font-bold mb-4 comic-text">PROFILE</h1>
+        <p className="text-2xl text-brutalist-pink">Please connect your wallet first!</p>
+      </div>
+    )
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-4xl">
-        {/* Header */}
-        <div className="mb-12">
-          <h1 className="font-righteous text-4xl font-bold text-white sm:text-5xl">
-            Account
-          </h1>
-          <p className="mt-2 font-poppins text-slate-400">
-            Manage your profile and view statistics
-          </p>
-        </div>
+    <div className="container mx-auto px-4 py-12">
+      <h1 className="text-6xl font-bold mb-8 comic-text text-brutalist-pink">
+        MY PROFILE
+      </h1>
 
-        {/* Profile Card */}
-        <div className="mb-8 rounded-xl border border-slate-700 bg-gradient-to-br from-slate-800/50 to-slate-900/50 p-8 backdrop-blur">
-          <div className="mb-8">
-            <div className="mb-4 inline-flex rounded-full bg-gradient-to-br from-orange-400/20 to-pink-400/20 p-4">
-              <Wallet className="h-8 w-8 text-orange-400" />
-            </div>
-            <h2 className="mb-2 font-righteous text-2xl font-bold text-white">
-              Wallet Address
-            </h2>
-            <div className="flex flex-wrap items-center gap-3">
-              <code className="rounded-lg bg-slate-700/50 px-4 py-2 font-mono text-sm text-slate-300 break-all">
-                {mockCurrentUser.address}
-              </code>
-              <button
-                onClick={copyAddress}
-                className="rounded-lg border border-slate-600 bg-slate-700/50 p-2 transition-all duration-200 hover:border-orange-400 hover:bg-slate-600 cursor-pointer"
-                title="Copy address"
-              >
-                <Copy className="h-5 w-5 text-slate-400" />
-              </button>
-              {copied && (
-                <span className="font-poppins text-xs text-green-400">
-                  Copied!
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Balance */}
-          <div className="rounded-lg bg-slate-700/30 p-6">
-            <p className="font-poppins text-sm text-slate-400 mb-2">
-              Available Balance
-            </p>
-            <div className="flex items-baseline gap-2">
-              <div className="font-righteous text-4xl font-bold text-blue-400">
-                {mockCurrentUser.balance.toFixed(3)}
-              </div>
-              <span className="font-poppins font-semibold text-slate-400">
-                SUI
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Stats Grid */}
-        <div className="mb-8 grid grid-cols-1 gap-6 sm:grid-cols-2">
-          {/* Total Revenue */}
-          <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-6 backdrop-blur">
-            <div className="mb-4 inline-flex rounded-lg bg-gradient-to-br from-blue-400/20 to-cyan-400/20 p-3">
-              <TrendingUp className="h-6 w-6 text-blue-400" />
-            </div>
-            <p className="font-poppins text-sm text-slate-400">Total Revenue</p>
-            <div className="mt-2 flex items-baseline gap-2">
-              <div className="font-righteous text-3xl font-bold text-blue-400">
-                {mockCurrentUser.totalRevenue.toFixed(3)}
-              </div>
-              <span className="font-poppins text-sm text-slate-400">SUI</span>
-            </div>
-            <p className="mt-3 font-poppins text-xs text-slate-500">
-              Earned from listen payments
-            </p>
-          </div>
-
-          {/* Total Listens */}
-          <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-6 backdrop-blur">
-            <div className="mb-4 inline-flex rounded-lg bg-gradient-to-br from-orange-400/20 to-pink-400/20 p-3">
-              <Headphones className="h-6 w-6 text-orange-400" />
-            </div>
-            <p className="font-poppins text-sm text-slate-400">Total Listens</p>
-            <div className="mt-2 flex items-baseline gap-2">
-              <div className="font-righteous text-3xl font-bold text-orange-400">
-                {(mockCurrentUser.totalListens / 1000).toFixed(1)}K
-              </div>
-            </div>
-            <p className="mt-3 font-poppins text-xs text-slate-500">
-              Listens across all tracks
-            </p>
-          </div>
-
-          {/* Total Tracks */}
-          <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-6 backdrop-blur">
-            <div className="mb-4 inline-flex rounded-lg bg-gradient-to-br from-purple-400/20 to-pink-400/20 p-3">
-              <Music className="h-6 w-6 text-purple-400" />
-            </div>
-            <p className="font-poppins text-sm text-slate-400">
-              Published Tracks
-            </p>
-            <div className="mt-2 flex items-baseline gap-2">
-              <div className="font-righteous text-3xl font-bold text-purple-400">
-                {mockCurrentUser.totalTracks}
-              </div>
-            </div>
-            <p className="mt-3 font-poppins text-xs text-slate-500">
-              Tracks you've published
-            </p>
-          </div>
-
-          {/* Joined */}
-          <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-6 backdrop-blur">
-            <div className="mb-4 inline-flex rounded-lg bg-gradient-to-br from-green-400/20 to-blue-400/20 p-3">
-              <Music className="h-6 w-6 text-green-400" />
-            </div>
-            <p className="font-poppins text-sm text-slate-400">Member Since</p>
-            <div className="mt-2">
-              <div className="font-righteous text-lg font-bold text-green-400">
-                January 2024
-              </div>
-            </div>
-            <p className="mt-3 font-poppins text-xs text-slate-500">
-              Active creator
-            </p>
-          </div>
-        </div>
-
-        {/* Settings Section */}
-        <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-6 backdrop-blur">
-          <h3 className="mb-6 font-poppins font-semibold text-white">
-            Settings
-          </h3>
-
-          <div className="space-y-4">
-            {/* Notification Settings */}
-            <div className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-700/30 p-4">
+      {loading ? (
+        <div className="text-center text-2xl">Loading...</div>
+      ) : (
+        <div className="space-y-8">
+          {/* Wallet Stats */}
+          <div className="border-8 border-black bg-white text-black p-6">
+            <h2 className="text-3xl font-bold mb-4">💰 WALLET</h2>
+            <div className="grid grid-cols-2 gap-6">
               <div>
-                <p className="font-poppins font-semibold text-white">
-                  Email Notifications
-                </p>
-                <p className="font-poppins text-sm text-slate-400">
-                  Get updates on new listens and revenue
-                </p>
+                <p className="text-brutalist-gray uppercase">Address</p>
+                <p className="text-xl font-mono">{account.address.slice(0, 20)}...</p>
               </div>
-              <div className="h-6 w-10 cursor-pointer rounded-full bg-orange-500 transition-colors" />
-            </div>
-
-            {/* Privacy Settings */}
-            <div className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-700/30 p-4">
               <div>
-                <p className="font-poppins font-semibold text-white">
-                  Public Profile
-                </p>
-                <p className="font-poppins text-sm text-slate-400">
-                  Allow others to see your profile
-                </p>
+                <p className="text-brutalist-gray uppercase">Balance</p>
+                <p className="text-3xl font-bold">{(balance / 1_000_000_000).toFixed(3)} SUI</p>
               </div>
-              <div className="h-6 w-10 cursor-pointer rounded-full bg-orange-500 transition-colors" />
-            </div>
-
-            {/* Two-Factor Auth */}
-            <div className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-700/30 p-4">
-              <div>
-                <p className="font-poppins font-semibold text-white">
-                  Two-Factor Authentication
-                </p>
-                <p className="font-poppins text-sm text-slate-400">
-                  Secure your account with 2FA
-                </p>
-              </div>
-              <div className="h-6 w-10 cursor-pointer rounded-full bg-slate-600 transition-colors" />
             </div>
           </div>
-        </div>
 
-        {/* Logout Button */}
-        <div className="mt-8">
-          <button className="group relative inline-flex items-center justify-center gap-2 rounded-lg border border-red-500/50 bg-red-500/10 px-6 py-3 font-poppins font-semibold text-red-400 transition-all duration-200 hover:border-red-500 hover:bg-red-500/20 cursor-pointer">
-            <LogOut className="h-5 w-5" />
-            Disconnect Wallet
-          </button>
+          {/* My Music */}
+          <div className="border-8 border-brutalist-green bg-black text-white p-6">
+            <h2 className="text-3xl font-bold mb-4">🎵 MY MUSIC ({myMusic.length})</h2>
+            {myMusic.length === 0 ? (
+              <p className="text-brutalist-gray">No music uploaded yet</p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {myMusic.map(music => (
+                  <div
+                    key={music.id}
+                    onClick={() => navigate(`/play/${music.id}`)}
+                    className="border-4 border-white bg-brutalist-bg p-4 cursor-pointer hover:bg-brutalist-gray transition-colors"
+                  >
+                    <h3 className="font-bold text-lg mb-2">Track #{music.id.slice(-6)}</h3>
+                    <div className="text-sm space-y-1">
+                      <p>👂 {music.total_listens} listens</p>
+                      <p>💰 {music.revenue_balance} MIST revenue</p>
+                      <p>
+                        Status:{' '}
+                        {music.status === 0 ? '📝 Draft' : music.status === 1 ? '✅ Published' : '🔒 Frozen'}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* My Stakes */}
+          <div className="border-8 border-brutalist-yellow bg-black text-white p-6">
+            <h2 className="text-3xl font-bold mb-4">🎲 MY PREDICTIONS ({myStakes.length})</h2>
+            {myStakes.length === 0 ? (
+              <p className="text-brutalist-gray">No predictions yet</p>
+            ) : (
+              <div className="space-y-3">
+                {myStakes.map(stake => (
+                  <div
+                    key={stake.id}
+                    className="border-4 border-white bg-brutalist-bg p-4"
+                  >
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="font-bold">Track: {stake.music_id.slice(-8)}</p>
+                        <p className="text-sm text-brutalist-gray">
+                          Staked: {stake.amount / 1_000_000_000} SUI
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-brutalist-gray">Unlock Epoch</p>
+                        <p className="font-bold">{stake.unlock_epoch}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
-  );
+  )
 }

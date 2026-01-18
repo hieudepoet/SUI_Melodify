@@ -1,306 +1,199 @@
-import { useState } from "react";
-import { Upload, Music, AlertCircle, CheckCircle } from "lucide-react";
-import WaveformPreview from "../components/music/WaveformPreview";
-import { walrusService } from "../services/walrus";
-import { useMintMusic } from "../hooks/useMintMusic";
+import { useState } from 'react'
+import { useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit'
+import { useNavigate } from 'react-router-dom'
+import { uploadToWalrus } from '../services/walrus'
+import { buildCreateMusicTx, buildPublishMusicTx } from '../services/sui/transactions'
 
 export default function UploadPage() {
-  const { mintMusic } = useMintMusic();
-  const [file, setFile] = useState<File | null>(null);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [price, setPrice] = useState(0.5);
-  const [genre, setGenre] = useState("Electronic");
-  const [isPublishing, setIsPublishing] = useState(false);
-  const [uploadSuccess, setUploadSuccess] = useState(false);
-  const [error, setError] = useState("");
+  const account = useCurrentAccount()
+  const navigate = useNavigate()
+  const { mutateAsync: signAndExecute } = useSignAndExecuteTransaction()
 
-  const genres = [
-    "Electronic",
-    "Hip-Hop",
-    "Ambient",
-    "Jazz",
-    "Rock",
-    "Pop",
-    "Classical",
-    "World",
-  ];
+  const [file, setFile] = useState<File | null>(null)
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [genre, setGenre] = useState('')
+  const [uploading, setUploading] = useState(false)
+  const [step, setStep] = useState<'select' | 'uploading' | 'minting'>('select')
+
+  if (!account) {
+    return (
+      <div className="container mx-auto px-4 py-12 text-center">
+        <h1 className="text-6xl font-bold mb-4 comic-text">UPLOAD MUSIC</h1>
+        <p className="text-2xl text-brutalist-pink">Please connect your wallet first!</p>
+      </div>
+    )
+  }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      // Validate file size (50MB)
-      if (selectedFile.size > 50 * 1024 * 1024) {
-        setError("File size must be less than 50MB");
-        return;
-      }
-      // Validate file type
-      if (
-        !["audio/mpeg", "audio/wav", "audio/ogg"].includes(selectedFile.type)
-      ) {
-        setError("Unsupported format. Use MP3, WAV, or OGG");
-        return;
-      }
-      setFile(selectedFile);
-      setError("");
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0])
     }
-  };
+  }
 
-  const handlePublish = async () => {
-    if (!file || !title) {
-      setError("Please fill in all required fields");
-      return;
-    }
-
-    setIsPublishing(true);
-    setError("");
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!file) return
 
     try {
-      // 1. Upload audio to Walrus
-      console.log('Uploading audio to Walrus...');
-      const audioCid = await walrusService.uploadFile(file);
+      setUploading(true)
       
-      // 2. Upload preview (use same file for now, in production generate 30s preview)
-      console.log('Uploading preview...');
-      const previewCid = await walrusService.uploadFile(file);
-      
-      // 3. Create metadata JSON
+      // Step 1: Upload to Walrus
+      setStep('uploading')
+      console.log('Uploading to Walrus...')
+      const audioCid = await uploadToWalrus(file)
+      console.log('Audio CID:', audioCid)
+
+      // For MVP, use same CID for preview
+      const previewCid = audioCid
+
+      // Create metadata
       const metadata = {
-        name: title,
-        description: description || '',
-        genre: genre,
-        image: '', // In production: upload cover image
-        attributes: [
-          { trait_type: 'Genre', value: genre },
-          { trait_type: 'Price', value: `${price} SUI` },
-        ],
-      };
-      
-      // For now, store metadata as base64 (in production: upload to IPFS)
-      const metadataUri = `data:application/json;base64,${btoa(JSON.stringify(metadata))}`;
-      const coverUri = ''; // In production: upload cover to Walrus
-      
-      // 4. Mint Music NFT on blockchain
-      console.log('Minting Music NFT...');
-      const { musicId, digest } = await mintMusic({
+        title,
+        description,
+        genre,
+      }
+      const metadataUri = `data:application/json,${encodeURIComponent(JSON.stringify(metadata))}`
+      const coverUri = '' // Empty for MVP
+
+      // Step 2: Create Music NFT
+      setStep('minting')
+      console.log('Creating Music NFT...')
+      const { tx, music } = buildCreateMusicTx(
         audioCid,
         previewCid,
         metadataUri,
         coverUri,
-        royaltyBps: Math.floor(price * 100), // Convert price to basis points
-      });
-      
-      console.log('Music minted successfully!', { musicId, digest });
-      
-      setIsPublishing(false);
-      setUploadSuccess(true);
-      
-      // Reset form after 2 seconds
-      setTimeout(() => {
-        setUploadSuccess(false);
-        setFile(null);
-        setTitle("");
-        setDescription("");
-        setPrice(0.5);
-        setGenre("Electronic");
-      }, 3000);
-      
-    } catch (err) {
-      console.error('Upload failed:', err);
-      setIsPublishing(false);
-      setError((err as Error).message || 'Upload failed. Please try again.');
+        1000 // 10% royalty
+      )
+
+      // Transfer music to user
+      tx.transferObjects([music], account.address)
+
+      const result = await signAndExecute({ transaction: tx })
+      console.log('Music created:', result)
+
+      // Get music ID from created objects
+      const musicId = result.effects?.created?.find(
+        (obj: any) => obj.owner?.AddressOwner === account.address
+      )?.reference.objectId
+
+      if (musicId) {
+        // Step 3: Publish immediately
+        console.log('Publishing music...')
+        const publishTx = buildPublishMusicTx(musicId)
+        await signAndExecute({ transaction: publishTx })
+
+        alert('Music uploaded and published successfully!')
+        navigate(`/play/${musicId}`)
+      }
+    } catch (error) {
+      console.error('Upload failed:', error)
+      alert(`Upload failed: ${error}`)
+    } finally {
+      setUploading(false)
+      setStep('select')
     }
-  };
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-3xl">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="font-righteous text-4xl font-bold text-white sm:text-5xl">
-            Upload Your Music
-          </h1>
-          <p className="mt-2 font-poppins text-slate-400">
-            Share your track and start earning from every listen
-          </p>
-        </div>
+    <div className="container mx-auto px-4 py-12">
+      <h1 className="text-6xl font-bold mb-8 comic-text text-brutalist-pink">
+        UPLOAD MUSIC
+      </h1>
 
-        {/* Success Message */}
-        {uploadSuccess && (
-          <div className="mb-6 rounded-lg border border-green-500/50 bg-green-500/10 p-4">
-            <div className="flex items-center gap-3">
-              <CheckCircle className="h-6 w-6 text-green-400" />
-              <div>
-                <p className="font-poppins font-semibold text-green-400">
-                  Music published successfully!
-                </p>
-                <p className="font-poppins text-sm text-green-300">
-                  Your track is now live and available for purchase
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Error Message */}
-        {error && (
-          <div className="mb-6 rounded-lg border border-red-500/50 bg-red-500/10 p-4">
-            <div className="flex items-center gap-3">
-              <AlertCircle className="h-6 w-6 text-red-400" />
-              <p className="font-poppins text-red-400">{error}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Main Form */}
-        <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-8 backdrop-blur">
+      <div className="max-w-2xl mx-auto">
+        <form onSubmit={handleSubmit} className="border-8 border-black bg-white text-black p-8">
           {/* File Upload */}
-          <div className="mb-8">
-            <label className="block font-poppins font-semibold text-white mb-3">
-              Audio File *
-            </label>
-            <div
-              className="relative rounded-lg border-2 border-dashed border-slate-600 bg-slate-700/30 p-8 transition-all duration-200 hover:border-orange-400/50 cursor-pointer"
-              onClick={() => document.getElementById("file-input")?.click()}
-            >
-              <input
-                id="file-input"
-                type="file"
-                accept="audio/*"
-                onChange={handleFileChange}
-                className="hidden"
-              />
-              <div className="flex flex-col items-center gap-3">
-                <div className="rounded-lg bg-gradient-to-br from-orange-400/20 to-pink-400/20 p-4">
-                  <Upload className="h-8 w-8 text-orange-400" />
-                </div>
-                <div>
-                  <p className="font-poppins font-semibold text-white">
-                    {file ? file.name : "Click to upload or drag and drop"}
-                  </p>
-                  <p className="font-poppins text-sm text-slate-400">
-                    MP3, WAV, or OGG up to 50MB
-                  </p>
-                </div>
-              </div>
-            </div>
+          <div className="mb-6">
+            <label className="block font-bold text-xl mb-2 uppercase">Audio File</label>
+            <input
+              type="file"
+              accept="audio/*"
+              onChange={handleFileChange}
+              className="w-full border-4 border-black p-2"
+              required
+            />
+            {file && (
+              <p className="mt-2 text-brutalist-green">
+                ✓ {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+              </p>
+            )}
           </div>
-
-          {/* Waveform Preview */}
-          {file && (
-            <div className="mb-8">
-              <label className="block font-poppins font-semibold text-white mb-3">
-                Waveform Preview
-              </label>
-              <WaveformPreview file={file} />
-            </div>
-          )}
 
           {/* Title */}
           <div className="mb-6">
-            <label
-              htmlFor="title"
-              className="block font-poppins font-semibold text-white mb-2"
-            >
-              Track Title *
-            </label>
+            <label className="block font-bold text-xl mb-2 uppercase">Title</label>
             <input
-              id="title"
               type="text"
               value={title}
-              onChange={e => setTitle(e.target.value)}
-              placeholder="Enter track title"
-              className="w-full rounded-lg border border-slate-600 bg-slate-700/50 px-4 py-2 font-poppins text-white placeholder-slate-500 transition-all duration-200 focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-400/20"
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full border-4 border-black p-2 uppercase"
+              placeholder="MY AWESOME TRACK"
+              required
             />
           </div>
 
           {/* Description */}
           <div className="mb-6">
-            <label
-              htmlFor="description"
-              className="block font-poppins font-semibold text-white mb-2"
-            >
-              Description
-            </label>
+            <label className="block font-bold text-xl mb-2 uppercase">Description</label>
             <textarea
-              id="description"
               value={description}
-              onChange={e => setDescription(e.target.value)}
-              placeholder="Tell listeners about your track"
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full border-4 border-black p-2"
               rows={4}
-              className="w-full rounded-lg border border-slate-600 bg-slate-700/50 px-4 py-2 font-poppins text-white placeholder-slate-500 transition-all duration-200 focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-400/20 resize-none"
+              placeholder="Tell us about your music..."
+              required
             />
           </div>
 
           {/* Genre */}
           <div className="mb-6">
-            <label
-              htmlFor="genre"
-              className="block font-poppins font-semibold text-white mb-2"
-            >
-              Genre
-            </label>
+            <label className="block font-bold text-xl mb-2 uppercase">Genre</label>
             <select
-              id="genre"
               value={genre}
-              onChange={e => setGenre(e.target.value)}
-              className="w-full rounded-lg border border-slate-600 bg-slate-700/50 px-4 py-2 font-poppins text-white transition-all duration-200 focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-400/20"
+              onChange={(e) => setGenre(e.target.value)}
+              className="w-full border-4 border-black p-2 uppercase"
+              required
             >
-              {genres.map(g => (
-                <option key={g} value={g} className="bg-slate-800">
-                  {g}
-                </option>
-              ))}
+              <option value="">Select Genre</option>
+              <option value="electronic">Electronic</option>
+              <option value="hip-hop">Hip Hop</option>
+              <option value="rock">Rock</option>
+              <option value="pop">Pop</option>
+              <option value="other">Other</option>
             </select>
           </div>
 
-          {/* Price */}
-          <div className="mb-8">
-            <label
-              htmlFor="price"
-              className="block font-poppins font-semibold text-white mb-2"
-            >
-              Price per Listen (SUI)
-            </label>
-            <div className="flex items-center gap-4">
-              <input
-                id="price"
-                type="range"
-                min="0.1"
-                max="5"
-                step="0.1"
-                value={price}
-                onChange={e => setPrice(parseFloat(e.target.value))}
-                className="flex-1 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-orange-500"
-              />
-              <div className="rounded-lg bg-slate-700/50 px-4 py-2 min-w-20">
-                <p className="font-poppins font-bold text-orange-400">
-                  {price.toFixed(1)}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Publish Button */}
+          {/* Submit Button */}
           <button
-            onClick={handlePublish}
-            disabled={isPublishing}
-            className="w-full group relative inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-orange-500 to-pink-500 px-8 py-4 font-poppins font-semibold text-white shadow-lg shadow-orange-500/50 transition-all duration-200 hover:shadow-orange-500/75 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            type="submit"
+            disabled={uploading || !file}
+            className={`w-full btn-brutalist text-2xl shadow-brutalist hover:shadow-brutalist-hover ${
+              uploading
+                ? 'bg-brutalist-gray cursor-not-allowed'
+                : 'bg-brutalist-green'
+            }`}
           >
-            {isPublishing ? (
-              <>
-                <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                Publishing...
-              </>
-            ) : (
-              <>
-                <Music className="h-5 w-5" />
-                Publish to Chain
-              </>
-            )}
+            {uploading
+              ? step === 'uploading'
+                ? 'UPLOADING TO WALRUS...'
+                : 'MINTING NFT...'
+              : 'UPLOAD & PUBLISH'}
           </button>
+        </form>
+
+        {/* Info Box */}
+        <div className="mt-8 border-4 border-brutalist-yellow bg-black text-white p-4">
+          <h3 className="font-bold text-xl mb-2">📝 HOW IT WORKS:</h3>
+          <ul className="list-disc list-inside space-y-1">
+            <li>Upload your audio file to Walrus storage</li>
+            <li>Create Music NFT on SUI blockchain</li>
+            <li>10% royalty on all listens</li>
+            <li>Immediately published and available</li>
+          </ul>
         </div>
       </div>
     </div>
-  );
+  )
 }

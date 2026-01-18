@@ -1,8 +1,13 @@
 import { SuiClient, getFullnodeUrl } from '@mysten/sui/client';
-import { SUI_CONFIG } from '@/config/sui';
+import { NETWORK } from '../../config/constants';
 
+// Create Sui client instance
 export const suiClient = new SuiClient({
-  url: getFullnodeUrl(SUI_CONFIG.NETWORK as 'testnet' | 'mainnet'),
+  url: getFullnodeUrl(NETWORK),
 });
 
-export type { SuiClient };
+// Network configuration
+export const networkConfig = {
+  network: NETWORK,
+  url: getFullnodeUrl(NETWORK),
+};

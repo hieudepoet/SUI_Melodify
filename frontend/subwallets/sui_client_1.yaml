@@ -1,0 +1,11 @@
+---
+keystore:
+  File: "subwallets\\sui_1.keystore"
+external_keys: ~
+envs:
+  - alias: testnet
+    rpc: "https://fullnode.testnet.sui.io:443"
+    ws: ~
+    basic_auth: ~
+active_env: testnet
+active_address: "0xcd69e238feb14689070f711052997d5ce9e7b9864d0a3330d844298617470d26"

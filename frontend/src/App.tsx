@@ -1,28 +1,32 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Header from "./components/common/Header";
-import HomePage from "./pages/HomePage";
-import UploadPage from "./pages/UploadPage";
-import DiscoverPage from "./pages/DiscoverPage";
-import MyMusicPage from "./pages/MyMusicPage";
-import ProfilePage from "./pages/ProfilePage";
-import ListenPage from "./pages/ListenPage";
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import Header from './components/layout/Header'
+import GlobalPlayer from './components/layout/GlobalPlayer'
+import HomePage from './pages/HomePage'
+import UploadPage from './pages/UploadPage'
+import PlayPage from './pages/PlayPage'
+import StakePage from './pages/StakePage'
+import ProfilePage from './pages/ProfilePage'
 
 function App() {
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-slate-900">
+      <div className="min-h-screen flex flex-col bg-brutalist-bg">
         <Header />
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/upload" element={<UploadPage />} />
-          <Route path="/discover" element={<DiscoverPage />} />
-          <Route path="/my-music" element={<MyMusicPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/listen/:musicId" element={<ListenPage />} />
-        </Routes>
+        
+        <main className="flex-1 pb-32">
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/upload" element={<UploadPage />} />
+            <Route path="/play/:musicId" element={<PlayPage />} />
+            <Route path="/stake" element={<StakePage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+          </Routes>
+        </main>
+
+        <GlobalPlayer />
       </div>
     </BrowserRouter>
-  );
+  )
 }
 
-export default App;
+export default App

@@ -1,14 +1,25 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import tailwindcss from '@tailwindcss/vite'
-import path from 'path'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
+  plugins: [react()],
+  server: {
+    proxy: {
+      '/walrus-publisher': {
+        target: 'https://publisher.walrus-testnet.walrus.space',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/walrus-publisher/, ''),
+      },
+      '/walrus-aggregator': {
+        target: 'https://aggregator.walrus-testnet.walrus.space',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/walrus-aggregator/, ''),
+      },
     },
+  },
+  optimizeDeps: {
+    exclude: ['@mysten/walrus'],
+    include: ['dataloader'],
   },
 })
