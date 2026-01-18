@@ -91,6 +91,7 @@ export default function UploadPage() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const effectAny = result.effects as any;
       const musicId = effectAny?.created?.find(
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (obj: any) => obj.owner?.AddressOwner === account.address
       )?.reference.objectId
 

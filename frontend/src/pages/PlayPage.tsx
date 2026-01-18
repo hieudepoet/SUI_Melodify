@@ -7,6 +7,9 @@ import { buildListenTx } from '../services/sui/transactions'
 import { DEFAULT_LISTEN_PRICE } from '../config/constants'
 import { usePlayerStore } from '../store/playerStore'
 
+// Type alias for Move object fields
+type MoveObjectFields = Record<string, unknown>
+
 export default function PlayPage() {
   const { musicId } = useParams<{ musicId: string }>()
   const account = useCurrentAccount()
@@ -33,28 +36,34 @@ export default function PlayPage() {
         options: { showContent: true },
       })
 
-      if (result.data?.content?.type.includes('::music::Music')) {
-        const fields = (result.data.content as any).fields
+      if (
+        result.data?.content &&
+        result.data.content.dataType === 'moveObject' &&
+        result.data.content.type.includes('::music::Music')
+      ) {
+        const fields = result.data.content.fields as MoveObjectFields
+        
         const musicData: Music = {
           id: result.data.objectId,
-          creator: fields.creator,
-          audio_cid: fields.audio_cid,
-          preview_cid: fields.preview_cid,
-          metadata_uri: fields.metadata_uri,
-          cover_uri: fields.cover_uri,
-          parent: fields.parent || null,
-          total_listens: parseInt(fields.total_listens),
-          revenue_balance: parseInt(fields.revenue_pool),
-          royalty_bps: fields.royalty_bps,
-          status: fields.status,
+          creator: fields['creator'] as string,
+          audio_cid: fields['audio_cid'] as string,
+          preview_cid: fields['preview_cid'] as string,
+          metadata_uri: fields['metadata_uri'] as string,
+          cover_uri: fields['cover_uri'] as string,
+          parent: fields['parent'] as string || null,
+          total_listens: parseInt(fields['total_listens'] as string),
+          revenue_balance: parseInt(fields['revenue_pool'] as string),
+          royalty_bps: fields['royalty_bps'] as number,
+          status: fields['status'] as number,
         }
 
         setMusic(musicData)
 
         // Parse metadata
         try {
-          if (fields.metadata_uri.startsWith('data:')) {
-            const jsonStr = decodeURIComponent(fields.metadata_uri.split(',')[1])
+          const metadataUri = fields['metadata_uri'] as string
+          if (metadataUri.startsWith('data:')) {
+            const jsonStr = decodeURIComponent(metadataUri.split(',')[1])
             setMetadata(JSON.parse(jsonStr))
           }
         } catch (e) {
@@ -78,10 +87,14 @@ export default function PlayPage() {
         options: { showContent: true, showType: true },
       })
 
-      const listenCap = ownedObjects.data.find((obj: any) => {
-        if (obj.data?.content?.type?.includes('::listen::ListenCap')) {
-          const fields = obj.data.content.fields
-          return fields.music_id === musicId
+      const listenCap = ownedObjects.data.find((obj) => {
+        if (
+          obj.data?.content &&
+          obj.data.content.dataType === 'moveObject' &&
+          obj.data.content.type?.includes('::listen::ListenCap')
+        ) {
+          const fields = obj.data.content.fields as MoveObjectFields
+          return fields['music_id'] === musicId
         }
         return false
       })

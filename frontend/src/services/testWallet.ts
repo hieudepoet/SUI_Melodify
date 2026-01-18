@@ -5,12 +5,12 @@ import { decodeSuiPrivateKey } from "@mysten/sui/cryptography";
 import { getTestPrivateKey } from "../config";
 
 // Enable test mode via environment variable or localStorage
-const isTestMode = () => {
-  return (
-    import.meta.env.VITE_TEST_MODE === "true" ||
-    localStorage.getItem("testMode") === "true"
-  );
-};
+// const isTestMode = () => {
+//   return (
+//     import.meta.env.VITE_TEST_MODE === "true" ||
+//     localStorage.getItem("testMode") === "true"
+//   );
+// };
 
 let testKeypair: Ed25519Keypair | null = null;
 let testClient: SuiClient | null = null;

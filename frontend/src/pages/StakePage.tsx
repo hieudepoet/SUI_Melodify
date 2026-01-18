@@ -27,7 +27,7 @@ export default function StakePage() {
         limit: 10,
         order: 'descending',
       })
-
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const musicIds = result.data.map((event: any) => event.parsedJson.music_id)
       const musicObjects = await Promise.all(
         musicIds.map(id => suiClient.getObject({
@@ -37,6 +37,7 @@ export default function StakePage() {
       )
 
       const musicData = musicObjects
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .map((obj: any) => {
           if (obj.data?.content?.fields) {
             const fields = obj.data.content.fields
