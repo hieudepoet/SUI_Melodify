@@ -127,7 +127,7 @@ public fun listen(
     config: &ListenConfig,
     clock: &Clock,
     ctx: &mut TxContext,
-): ListenCap {
+) {
     assert!(music::is_published(music), EMusicNotPublished);
 
     let paid_amount = coin::value(&payment);
@@ -205,7 +205,7 @@ public fun listen(
         price_paid: paid_amount,
     });
 
-    cap
+    transfer::transfer(cap, listener);
 }
 
 // ======== Parent Royalty Functions ========

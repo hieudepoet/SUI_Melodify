@@ -60,7 +60,7 @@ export function buildListenTx(musicId: string, paymentAmount: number) {
 
   const [paymentCoin] = tx.splitCoins(tx.gas, [paymentAmount]);
 
-  const [listenCap] = tx.moveCall({
+  tx.moveCall({
     target: `${PACKAGE_ID}::listen::listen`,
     arguments: [
       tx.object(musicId),
@@ -72,7 +72,7 @@ export function buildListenTx(musicId: string, paymentAmount: number) {
     ],
   });
 
-  return { tx, listenCap };
+  return { tx };
 }
 
 /**

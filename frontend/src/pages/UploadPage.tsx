@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit'
 import { useNavigate } from 'react-router-dom'
 import { uploadToWalrus } from '../services/walrus'
-import { buildCreateMusicTx, buildPublishMusicTx } from '../services/sui/transactions'
+import { PACKAGE_ID } from '../config/constants'
+import { suiClient } from '../services/sui/client'
+import { Transaction } from '@mysten/sui/transactions'
 
 export default function UploadPage() {
   const account = useCurrentAccount()
@@ -69,41 +71,69 @@ export default function UploadPage() {
       const metadataUri = `data:application/json,${encodeURIComponent(JSON.stringify(metadata))}`
       const coverUri = '' // Empty for MVP
 
-      // Step 2: Create Music NFT
       setStep('minting')
-      console.log('Creating Music NFT...')
-      const { tx, music } = buildCreateMusicTx(
-        audioCid,
-        previewCid,
-        metadataUri,
-        coverUri,
-        1000 // 10% royalty
-      )
-
-      // Transfer music to user
-      tx.transferObjects([music], account.address)
+      console.log('Creating and Publishing Music NFT in single transaction...')
+      
+      const tx = new Transaction()
+      
+      // 1. Create Music
+      const [music] = tx.moveCall({
+        target: `${PACKAGE_ID}::music::create_music`,
+        arguments: [
+          tx.pure.string(audioCid),
+          tx.pure.string(previewCid),
+          tx.pure.string(metadataUri),
+          tx.pure.string(coverUri),
+          tx.pure.u16(1000), // 10% royalty
+          tx.pure.option('address', null), // No parent
+          tx.object(import.meta.env.VITE_MUSIC_REGISTRY_ID), // Registry
+        ],
+      })
+      
+      // 2. Publish Music (consume and share)
+      // Since this is in the SAME transaction as creation, share_object is allowed!
+      tx.moveCall({
+        target: `${PACKAGE_ID}::music::publish`,
+        arguments: [music],
+      })
 
       const result = await signAndExecute({ transaction: tx })
-      console.log('Music created:', result)
+      console.log('Transaction digest:', result.digest)
+      
+      // Wait for transaction
+      const txResult = await suiClient.waitForTransaction({
+        digest: result.digest,
+        options: {
+          showEffects: true,
+          showObjectChanges: true,
+        }
+      })
+      
+      console.log('Object changes:', txResult.objectChanges)
 
-      // Get music ID from created objects
-      // Cast effects to any to avoid TS issues with the SDK response type for now
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const effectAny = result.effects as any;
-      const musicId = effectAny?.created?.find(
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (obj: any) => obj.owner?.AddressOwner === account.address
-      )?.reference.objectId
-
-      if (musicId) {
-        // Step 3: Publish immediately
-        console.log('Publishing music...')
-        const publishTx = buildPublishMusicTx(musicId)
-        await signAndExecute({ transaction: publishTx })
-
-        alert('Music uploaded and published successfully!')
-        navigate(`/play/${musicId}`)
+      // Find the created Music object
+      let musicId: string | undefined;
+      
+      if (txResult.objectChanges) {
+        for (const change of txResult.objectChanges) {
+          if (
+            change.type === 'created' &&
+            change.objectType &&
+            change.objectType.includes('::music::Music')
+          ) {
+            musicId = change.objectId
+            console.log('Found Music object ID:', musicId)
+            break
+          }
+        }
       }
+
+      if (!musicId) {
+        throw new Error('Failed to get music ID from transaction')
+      }
+
+      alert('✅ Music uploaded and published successfully!')
+      navigate(`/play/${musicId}`)
     } catch (error) {
       console.error('Upload failed:', error)
       alert(`Upload failed: ${error}`)

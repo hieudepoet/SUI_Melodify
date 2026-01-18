@@ -114,21 +114,16 @@ export default function PlayPage() {
     try {
       setPurchasing(true)
 
-      const { tx, listenCap } = buildListenTx(music.id, DEFAULT_LISTEN_PRICE)
+      const { tx } = buildListenTx(music.id, DEFAULT_LISTEN_PRICE)
       
-      // Transfer to test wallet or current user
-      const recipient = testMode ? TEST_WALLET : account.address
-      tx.transferObjects([listenCap], recipient)
+      // ListenCap is automatically transferred to sender by the smart contract
+      // No manual transfer needed in PTB
 
       const result = await signAndExecute({ transaction: tx })
       console.log('Listen cap minted:', result)
 
-      if (testMode) {
-        alert(`✅ Payment successful!\n\nListenCap sent to TEST WALLET:\n${TEST_WALLET.slice(0, 20)}...`)
-      } else {
-        alert('✅ Payment successful! You can now listen to this track.')
-        setHasListenCap(true)
-      }
+      alert('✅ Payment successful! You can now listen to this track.')
+      setHasListenCap(true)
       
       loadMusic() // Reload to update listen count
     } catch (error) {
